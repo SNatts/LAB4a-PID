@@ -45,12 +45,12 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+int dir = 1;
+float duty = 0;
 int L = 0;
 uint32_t QEIPulse;
 uint32_t SetAngle = 0;
 uint32_t SetPulse = 0;
-uint32_t OpDeg = 0;
-uint32_t CurrDeg = 0;
 int DiffPulse = 0;
 int UnwrapPulse = 0;
 /* USER CODE END PV */
@@ -124,7 +124,8 @@ int main(void)
 //	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 //	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
 //	  HAL_Delay(1000);
-	  QEIPulse = __HAL_TIM_GET_COUNTER(&htim3);
+	  static uint32_t timestamp = 0;
+  	  QEIPulse = __HAL_TIM_GET_COUNTER(&htim3);
 	  if(QEIPulse==0&&L==3071){
 		  DiffPulse+=1;
 	  }
@@ -132,16 +133,20 @@ int main(void)
 		  DiffPulse-=1;
 	  }
 	  SetPulse = SetAngle/0.1171875;
-	  L = QEIPulse;
 	  UnwrapPulse = QEIPulse+(DiffPulse*3072);
-	  if(SetAngle==0){
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+	  L = QEIPulse;
+	  if(HAL_GetTick()>timestamp){
+		  timestamp = HAL_GetTick()+10;
+		  if(SetAngle==0){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+		  }
+		  if(SetAngle==1){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+		  }
 	  }
-	  if(SetAngle==1){
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-	  }
+
   }
   /* USER CODE END 3 */
 }

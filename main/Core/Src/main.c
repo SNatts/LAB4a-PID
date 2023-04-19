@@ -31,10 +31,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Choose PID parameters */
-#define PID_Kp        100            /* Proportional */
-#define PID_Ki        0.025        /* Integral */
-#define PID_Kd        20            /* Derivative */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,11 +45,14 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t QEIReadRaw;
-
-uint32_t SetDeg = 0;
+int L = 0;
+uint32_t QEIPulse;
+uint32_t SetAngle = 0;
+uint32_t SetPulse = 0;
 uint32_t OpDeg = 0;
 uint32_t CurrDeg = 0;
+int DiffPulse = 0;
+int UnwrapPulse = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,11 +102,13 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1|TIM_CHANNEL_2);
 
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+
+  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1|TIM_CHANNEL_2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,10 +124,23 @@ int main(void)
 //	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 //	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
 //	  HAL_Delay(1000);
-	  static uint32_t timestamp = 0;
-	  QEIReadRaw = __HAL_TIM_GET_COUNTER(&htim3);
-	  if (HAL_GetTick()>=timestamp){
-		  //statement
+	  QEIPulse = __HAL_TIM_GET_COUNTER(&htim3);
+	  if(QEIPulse==0&&L==3071){
+		  DiffPulse+=1;
+	  }
+	  if(QEIPulse==3071&&L==0){
+		  DiffPulse-=1;
+	  }
+	  SetPulse = SetAngle/0.1171875;
+	  L = QEIPulse;
+	  UnwrapPulse = QEIPulse+(DiffPulse*3072);
+	  if(SetAngle==0){
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+	  }
+	  if(SetAngle==1){
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
+		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 	  }
   }
   /* USER CODE END 3 */

@@ -31,6 +31,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define PID_Kp        40            /* Proportional */
+#define PID_Ki        0.025        /* Integral */
+#define PID_Kd        10            /* Derivative */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,13 +49,17 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 int dir = 1;
+float u = 0;
 float duty = 0;
 int L = 0;
 uint32_t QEIPulse;
 uint32_t SetAngle = 0;
-uint32_t SetPulse = 0;
+int SetPulse = 0;
 int DiffPulse = 0;
 int UnwrapPulse = 0;
+
+arm_pid_instance_f32 PID={0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,6 +116,11 @@ int main(void)
 
   HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1|TIM_CHANNEL_2);
 
+  PID.Kp = PID_Kp;        /* Proportional */
+  PID.Ki = PID_Ki;        /* Integral */
+  PID.Kd = PID_Kd;        /* Derivative */
+
+  arm_pid_init_f32(&PID, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -137,12 +149,24 @@ int main(void)
 	  L = QEIPulse;
 	  if(HAL_GetTick()>timestamp){
 		  timestamp = HAL_GetTick()+10;
-		  if(SetAngle==0){
-			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+
+		  u = arm_pid_f32(&PID, SetPulse-UnwrapPulse);
+
+		  if(u<0){
+			  dir = -1;
 		  }
-		  if(SetAngle==1){
-			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 500);
+
+		  duty = fabs(u);
+		  if (duty > 1000) {
+			  duty = 1000;
+		  }
+
+		  if(dir==-1){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty);
+		  }
+		  if(dir==1){
+			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty);
 			  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 		  }
 	  }
